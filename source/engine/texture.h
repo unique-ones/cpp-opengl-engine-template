@@ -37,7 +37,7 @@ struct Texture {
 
     /// Loads a texture from the given path and uploads it to the gpu
     /// @param path The path to the image file
-    Texture(const fs::path &path);
+    explicit Texture(const fs::path &path);
 
     /// Destroys the specified texture and its data
     ~Texture();

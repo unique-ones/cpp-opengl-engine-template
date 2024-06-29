@@ -62,7 +62,7 @@ struct RenderGroup {
     void clear();
 
     /// Pushes a render command to the render group
-    void push(RenderCommand &&command);
+    void push(const RenderCommand &command);
 };
 
 struct QuadCreateInfo {
@@ -101,11 +101,6 @@ struct Renderer {
 
     /// Ends the started render pass and submits to the gpu
     void end();
-
-    /// Indicate to the renderer that a resize is necessary
-    /// @param width The width
-    /// @param height The height
-    void resize(s32 width, s32 height);
 
     /// Draws a quad
     /// @param info The quad's information

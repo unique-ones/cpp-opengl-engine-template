@@ -41,7 +41,7 @@ struct Window {
 
     /// Creates a new window
     /// @param info The window information
-    Window(const WindowCreateInfo &info);
+    explicit Window(const WindowCreateInfo &info);
 
     /// Destroys the window
     ~Window();

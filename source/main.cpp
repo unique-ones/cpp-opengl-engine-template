@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     Renderer renderer{};
 
     // Configure the clear color of the renderer to be dark grey
-    renderer.clear_color({ 0.15f, 0.15f, 0.15f, 1.0f });
+    Renderer::clear_color({ 0.15f, 0.15f, 0.15f, 1.0f });
 
     // Continue event loop while the window wants to stay open
     while (not window.should_close()) {

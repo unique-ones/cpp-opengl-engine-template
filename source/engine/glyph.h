@@ -42,7 +42,7 @@ struct GlyphCache {
     static inline constexpr auto FONT_SIZE = 24;
 
     /// Creates a glyph cache for the specified font
-    GlyphCache(const fs::path &path);
+    explicit GlyphCache(const fs::path &path);
 
     /// Fetches the specified symbol from the glyph cache
     /// @param symbol The symbol that shall be fetched

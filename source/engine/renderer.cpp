@@ -49,15 +49,16 @@ void RenderGroup::clear() {
 }
 
 /// Pushes a set of vertices and indices to the render group
-void RenderGroup::push(RenderCommand &&command) {
-    commands.emplace_back(std::forward<RenderCommand>(command));
+void RenderGroup::push(const RenderCommand &command) {
+    commands.emplace_back(command);
 }
 
 /// Creates a new renderer
 Renderer::Renderer()
     : cache("assets/cmu-serif-roman.ttf"),
       glyph_group("assets/vertex.glsl", "assets/glyph_fragment.glsl"),
-      quad_group("assets/vertex.glsl", "assets/quad_fragment.glsl") {
+      quad_group("assets/vertex.glsl", "assets/quad_fragment.glsl"),
+      transform(1.0f) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
@@ -87,7 +88,7 @@ void Renderer::draw_quad(const QuadCreateInfo &info) {
 
     auto offset = static_cast<u32>(quad_group.commands.size() * 4);
     command.indices = { 0 + offset, 1 + offset, 2 + offset, 2 + offset, 0 + offset, 3 + offset };
-    quad_group.push(std::move(command));
+    quad_group.push(command);
 }
 
 /// Draws a symbol
@@ -113,7 +114,7 @@ void Renderer::draw_symbol(const SymbolCreateInfo &info) {
 
     auto offset = static_cast<u32>(glyph_group.commands.size() * 4);
     command.indices = { 0 + offset, 1 + offset, 2 + offset, 2 + offset, 0 + offset, 3 + offset };
-    glyph_group.push(std::move(command));
+    glyph_group.push(command);
 }
 
 /// Draws text
