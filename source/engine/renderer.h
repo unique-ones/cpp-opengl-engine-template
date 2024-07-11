@@ -85,10 +85,21 @@ struct TextCreateInfo {
     f32 size;
 };
 
+struct SpriteCreateInfo {
+    Texture *texture;
+    glm::vec2 position;
+    glm::vec2 size;
+    glm::vec4 color;
+};
+
 struct Renderer {
     GlyphCache cache;
     RenderGroup glyph_group;
     RenderGroup quad_group;
+    RenderGroup sprite_group;
+
+    s32 viewport_width;
+    s32 viewport_height;
     glm::mat4 transform;
 
     /// Creates a new renderer
@@ -114,6 +125,10 @@ struct Renderer {
     /// @param info The text information
     void draw_text(const TextCreateInfo &info);
 
+    /// Draws a sprite
+    /// @param info The sprite information
+    void draw_sprite(const SpriteCreateInfo &info);
+
     /// Clears the currently bound frame buffer
     static void clear();
 
@@ -126,7 +141,7 @@ private:
     void end_internal(RenderGroup &group);
 
     /// Performs the indexed draw call for the specified group
-    void draw_indexed(RenderGroup &group);
+    void draw_indexed(RenderGroup &group) const;
 };
 
 #endif// ENGINE_RENDERER_H

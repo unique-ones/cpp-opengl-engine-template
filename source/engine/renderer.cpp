@@ -58,6 +58,7 @@ Renderer::Renderer()
     : cache("assets/cmu-serif-roman.ttf"),
       glyph_group("assets/vertex.glsl", "assets/glyph_fragment.glsl"),
       quad_group("assets/vertex.glsl", "assets/quad_fragment.glsl"),
+      sprite_group("assets/vertex.glsl", "assets/sprite_fragment.glsl"),
       transform(1.0f) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -65,6 +66,8 @@ Renderer::Renderer()
 
 /// Begins a new render pass
 void Renderer::begin(s32 width, s32 height) {
+    viewport_width = width;
+    viewport_height = height;
     glyph_group.clear();
     quad_group.clear();
     transform = glm::ortho(0.0f, static_cast<f32>(width), static_cast<f32>(height), 0.0f);
@@ -73,7 +76,10 @@ void Renderer::begin(s32 width, s32 height) {
 /// Ends the started render pass and submits to the gpu
 void Renderer::end() {
     end_internal(quad_group);
+
+    cache.atlas.bind(0);
     end_internal(glyph_group);
+    Texture::unbind(0);
 }
 
 /// Draws a quad
@@ -147,6 +153,39 @@ void Renderer::draw_text(const TextCreateInfo &info) {
     }
 }
 
+/// Draws a sprite
+void Renderer::draw_sprite(const SpriteCreateInfo &info) {
+    // Due to the fact that draw_sprite is not compatible with batch rendering,
+    // it is necessary to restart the current render pass in order to preserve
+    // draw order.
+    // TODO(plank): Figure out a better approach
+    end();
+    begin(viewport_width, viewport_height);
+
+    RenderCommand command{};
+    command.vertices = {
+        Vertex{ { info.position.x, info.position.y }, { 0, 0 }, info.color },
+        Vertex{ { info.position.x, info.position.y + info.size.y }, { 0, 1 }, info.color },
+        Vertex{ { info.position.x + info.size.x, info.position.y + info.size.y }, { 1, 1 }, info.color },
+        Vertex{ { info.position.x + info.size.x, info.position.y }, { 1, 0 }, info.color },
+    };
+    command.indices = { 0, 1, 2, 2, 0, 3 };
+
+    // Push the command to the sprite group
+    sprite_group.push(command);
+
+    // Configure location of sprite texture
+    info.texture->bind(0);
+    sprite_group.shader.uniform("uniform_texture", 0);
+
+    // Perform draw call
+    end_internal(sprite_group);
+
+    // Cleanup
+    Texture::unbind(0);
+    sprite_group.clear();
+}
+
 /// Clears the currently bound frame buffer
 void Renderer::clear() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -193,11 +232,11 @@ void Renderer::end_internal(RenderGroup &group) {
 }
 
 /// Performs the indexed draw call for the specified group
-void Renderer::draw_indexed(RenderGroup &group) {
+void Renderer::draw_indexed(RenderGroup &group) const {
     group.vertex_array.bind();
     group.shader.bind();
     group.shader.uniform("uniform_transform", transform);
-    glDrawElements(GL_TRIANGLES, group.index_buffer.count, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(group.index_buffer.count), GL_UNSIGNED_INT, nullptr);
     Shader::unbind();
     VertexArray::unbind();
 }

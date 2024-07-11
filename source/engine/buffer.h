@@ -119,7 +119,7 @@ struct FrameBuffer {
 
     /// Creates a new frame buffer
     /// @param info The frame buffer specification
-    FrameBuffer(const FrameBufferInfo &info);
+    explicit FrameBuffer(const FrameBufferInfo &info);
 
     /// Destroys the frame buffer
     ~FrameBuffer();

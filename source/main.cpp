@@ -26,17 +26,19 @@
 
 int main(int argc, char **argv) {
     // Construct a window with the specified dimensions and title
-    WindowCreateInfo info{};
-    info.width = 800;
-    info.height = 400;
-    info.title = "OpenGL Renderer";
-    Window window{ info };
+    WindowCreateInfo window_info{};
+    window_info.width = 800;
+    window_info.height = 400;
+    window_info.title = "OpenGL Renderer";
+    Window window{ window_info };
 
     // Construct the 2D renderer
     Renderer renderer{};
 
     // Configure the clear color of the renderer to be dark grey
     Renderer::clear_color({ 0.15f, 0.15f, 0.15f, 1.0f });
+
+    Texture knight{ "assets/wn.png" };
 
     // Continue event loop while the window wants to stay open
     while (not window.should_close()) {
@@ -62,6 +64,13 @@ int main(int argc, char **argv) {
         for (auto quad : { red, green, blue }) {
             renderer.draw_quad(quad);
         }
+
+        SpriteCreateInfo sprite_info{};
+        sprite_info.position = { 70.0f, 20.0f };
+        sprite_info.size = { 50.0f, 50.0f };
+        sprite_info.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        sprite_info.texture = &knight;
+        renderer.draw_sprite(sprite_info);
 
         // Draw a sample text
         TextCreateInfo text{};
