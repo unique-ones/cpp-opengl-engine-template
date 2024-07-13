@@ -25,10 +25,18 @@
 
 #include <array>
 #include <glm/gtc/matrix_transform.hpp>
+#include <ranges>
+
+namespace {
+
+constexpr auto WHITE = glm::vec4(1.0f);
+constexpr auto NO_TEXTURE = -1;
+
+}// namespace
 
 /// Retrieves the layout of the vertex
 VertexBufferLayout Vertex::layout() {
-    return { ShaderType::FLOAT2, ShaderType::FLOAT2, ShaderType::FLOAT4 };
+    return { ShaderType::FLOAT2, ShaderType::FLOAT4, ShaderType::FLOAT2, ShaderType::INT };
 }
 
 /// Creates a new render group
@@ -58,16 +66,22 @@ Renderer::Renderer()
     : cache("assets/cmu-serif-roman.ttf"),
       glyph_group("assets/vertex.glsl", "assets/glyph_fragment.glsl"),
       quad_group("assets/vertex.glsl", "assets/quad_fragment.glsl"),
-      sprite_group("assets/vertex.glsl", "assets/sprite_fragment.glsl"),
       transform(1.0f) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Configure quad texture slots
+    for (auto i = s32{ 0 }; i < TEXTURE_MAX; ++i) {
+        auto name = std::format("uniform_textures[{}]", i);
+        quad_group.shader.uniform(name.c_str(), i + TEXTURE_START);
+    }
+
+    // Configure glyph atlas slot
+    glyph_group.shader.uniform("uniform_glyph_atlas", 0);
 }
 
 /// Begins a new render pass
 void Renderer::begin(s32 width, s32 height) {
-    viewport_width = width;
-    viewport_height = height;
     glyph_group.clear();
     quad_group.clear();
     transform = glm::ortho(0.0f, static_cast<f32>(width), static_cast<f32>(height), 0.0f);
@@ -82,14 +96,43 @@ void Renderer::end() {
     Texture::unbind(0);
 }
 
-/// Draws a quad
-void Renderer::draw_quad(const QuadCreateInfo &info) {
+/// Draws a colored quad
+void Renderer::draw_quad(const QuadExtent &ext, const glm::vec4 &color) {
     RenderCommand command{};
     command.vertices = {
-        Vertex{ { info.position.x, info.position.y }, {}, info.color },
-        Vertex{ { info.position.x, info.position.y + info.size.y }, {}, info.color },
-        Vertex{ { info.position.x + info.size.x, info.position.y + info.size.y }, {}, info.color },
-        Vertex{ { info.position.x + info.size.x, info.position.y }, {}, info.color },
+        Vertex{ { ext.position.x, ext.position.y }, color, { 0, 0 }, NO_TEXTURE },
+        Vertex{ { ext.position.x, ext.position.y + ext.size.y }, color, { 0, 1 }, NO_TEXTURE },
+        Vertex{ { ext.position.x + ext.size.x, ext.position.y + ext.size.y }, color, { 1, 1 }, NO_TEXTURE },
+        Vertex{ { ext.position.x + ext.size.x, ext.position.y }, color, { 1, 0 }, NO_TEXTURE },
+    };
+
+    auto offset = static_cast<u32>(quad_group.commands.size() * 4);
+    command.indices = { 0 + offset, 1 + offset, 2 + offset, 2 + offset, 0 + offset, 3 + offset };
+    quad_group.push(command);
+}
+
+/// Draws a textured quad
+void Renderer::draw_quad(const QuadExtent &ext, const Texture &texture) {
+    s32 index;
+    if (textures.contains(texture.handle)) {
+        index = textures[texture.handle];
+    } else {
+        if (textures.size() == TEXTURE_MAX) {
+            end_internal(quad_group);
+            quad_group.clear();
+            textures.clear();
+        }
+        index = static_cast<s32>(textures.size());
+        textures[texture.handle] = index;
+    }
+    texture.bind(index + TEXTURE_START);
+
+    RenderCommand command{};
+    command.vertices = {
+        Vertex{ { ext.position.x, ext.position.y }, WHITE, { 0, 0 }, index },
+        Vertex{ { ext.position.x, ext.position.y + ext.size.y }, WHITE, { 0, 1 }, index },
+        Vertex{ { ext.position.x + ext.size.x, ext.position.y + ext.size.y }, WHITE, { 1, 1 }, index },
+        Vertex{ { ext.position.x + ext.size.x, ext.position.y }, WHITE, { 1, 0 }, index },
     };
 
     auto offset = static_cast<u32>(quad_group.commands.size() * 4);
@@ -98,24 +141,27 @@ void Renderer::draw_quad(const QuadCreateInfo &info) {
 }
 
 /// Draws a symbol
-void Renderer::draw_symbol(const SymbolCreateInfo &info) {
-    auto scale = info.size / GlyphCache::FONT_SIZE;
-    auto scaled_size = info.glyph->size * scale;
-    auto scaled_position = glm::vec2{ info.position.x + info.glyph->bearing.x * scale,
-                                      info.position.y + (info.glyph->size.y - info.glyph->bearing.y) * scale };
+void Renderer::draw_symbol(const SymbolExtent &ext, const glm::vec4 &color, const GlyphInfo &glyph) {
+    auto scale = ext.size / GlyphCache::FONT_SIZE;
+    auto scaled_size = glyph.size * scale;
+    auto scaled_position = glm::vec2{ ext.position.x + glyph.bearing.x * scale,
+                                      ext.position.y + (glyph.size.y - glyph.bearing.y) * scale };
 
     RenderCommand command{};
     command.vertices = {
-        Vertex{ { scaled_position.x, scaled_position.y }, { info.glyph->texture_offset, 0.0f }, info.color },
+        Vertex{ { scaled_position.x, scaled_position.y }, color, { glyph.texture_offset, 0.0f }, NO_TEXTURE },
         Vertex{ { scaled_position.x, scaled_position.y + scaled_size.y },
-                { info.glyph->texture_offset, info.glyph->texture_span.y },
-                info.color },
+                color,
+                { glyph.texture_offset, glyph.texture_span.y },
+                NO_TEXTURE },
         Vertex{ { scaled_position.x + scaled_size.x, scaled_position.y + scaled_size.y },
-                { info.glyph->texture_offset + info.glyph->texture_span.x, info.glyph->texture_span.y },
-                info.color },
+                color,
+                { glyph.texture_offset + glyph.texture_span.x, glyph.texture_span.y },
+                NO_TEXTURE },
         Vertex{ { scaled_position.x + scaled_size.x, scaled_position.y },
-                { info.glyph->texture_offset + info.glyph->texture_span.x, 0.0f },
-                info.color }
+                color,
+                { glyph.texture_offset + glyph.texture_span.x, 0.0f },
+                NO_TEXTURE }
     };
 
     auto offset = static_cast<u32>(glyph_group.commands.size() * 4);
@@ -124,66 +170,32 @@ void Renderer::draw_symbol(const SymbolCreateInfo &info) {
 }
 
 /// Draws text
-void Renderer::draw_text(const TextCreateInfo &info) {
-    auto scale = info.size / GlyphCache::FONT_SIZE;
-    auto iterator = info.position;
-    auto symbol_info = [&](GlyphInfo &glyph) { return SymbolCreateInfo{ &glyph, iterator, info.color, info.size }; };
+void Renderer::draw_text(const TextExtent &ext, const glm::vec4 &color, std::string_view text) {
+    auto scale = ext.size / GlyphCache::FONT_SIZE;
+    auto iterator = ext.position;
 
-    for (auto ch : info.text) {
+    for (auto ch : text) {
         switch (ch) {
             case '\n': {
-                iterator.x = info.position.x;
-                iterator.y += info.size;
+                iterator.x = ext.position.x;
+                iterator.y += ext.size;
                 break;
             }
             case '\t': {
                 auto glyph = cache.acquire(' ');
                 for (u32 i = 0; i < 4; ++i) {
-                    draw_symbol(symbol_info(glyph));
+                    draw_symbol({ iterator, ext.size }, color, glyph);
                     iterator.x += glyph.advance.x * scale;
                 }
                 break;
             }
             default: {
                 auto glyph = cache.acquire(ch);
-                draw_symbol(symbol_info(glyph));
+                draw_symbol({ iterator, ext.size }, color, glyph);
                 iterator.x += glyph.advance.x * scale;
             }
         }
     }
-}
-
-/// Draws a sprite
-void Renderer::draw_sprite(const SpriteCreateInfo &info) {
-    // Due to the fact that draw_sprite is not compatible with batch rendering,
-    // it is necessary to restart the current render pass in order to preserve
-    // draw order.
-    // TODO(plank): Figure out a better approach
-    end();
-    begin(viewport_width, viewport_height);
-
-    RenderCommand command{};
-    command.vertices = {
-        Vertex{ { info.position.x, info.position.y }, { 0, 0 }, info.color },
-        Vertex{ { info.position.x, info.position.y + info.size.y }, { 0, 1 }, info.color },
-        Vertex{ { info.position.x + info.size.x, info.position.y + info.size.y }, { 1, 1 }, info.color },
-        Vertex{ { info.position.x + info.size.x, info.position.y }, { 1, 0 }, info.color },
-    };
-    command.indices = { 0, 1, 2, 2, 0, 3 };
-
-    // Push the command to the sprite group
-    sprite_group.push(command);
-
-    // Configure location of sprite texture
-    info.texture->bind(0);
-    sprite_group.shader.uniform("uniform_texture", 0);
-
-    // Perform draw call
-    end_internal(sprite_group);
-
-    // Cleanup
-    Texture::unbind(0);
-    sprite_group.clear();
 }
 
 /// Clears the currently bound frame buffer
@@ -203,10 +215,8 @@ void Renderer::end_internal(RenderGroup &group) {
     }
 
     auto command_count = group.commands.size();
-    auto vertices_size = 4 * sizeof(Vertex);
-    auto indices_size = 6 * sizeof(u32);
-    std::vector<Vertex> vertices(vertices_size * command_count);
-    std::vector<u32> indices(indices_size * command_count);
+    std::vector<Vertex> vertices(4 * command_count);
+    std::vector<u32> indices(6 * command_count);
 
     usize insert_index = 0;
     for (auto &command : group.commands) {

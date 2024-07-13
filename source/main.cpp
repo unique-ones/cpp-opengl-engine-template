@@ -38,7 +38,9 @@ int main(int argc, char **argv) {
     // Configure the clear color of the renderer to be dark grey
     Renderer::clear_color({ 0.15f, 0.15f, 0.15f, 1.0f });
 
-    Texture knight{ "assets/wn.png" };
+    Texture white_knight{ "assets/wn.png" };
+    Texture white_queen{ "assets/wq.png" };
+    Texture white_rook{ "assets/wr.png" };
 
     // Continue event loop while the window wants to stay open
     while (not window.should_close()) {
@@ -49,36 +51,29 @@ int main(int argc, char **argv) {
         renderer.begin(window.width, window.height);
 
         // Draw three quads
-        QuadCreateInfo red{};
-        red.position = { 20.0f, 20.0f };
-        red.size = { 50.0f, 50.0f };
-        red.color = { 1.0f, 0.0f, 0.0f, 1.0f };
-        QuadCreateInfo green{};
-        green.position = { 70.0f, 20.0f };
-        green.size = { 50.0f, 50.0f };
-        green.color = { 0.0f, 1.0f, 0.0f, 1.0f };
-        QuadCreateInfo blue{};
-        blue.position = { 120.0f, 20.0f };
-        blue.size = { 50.0f, 50.0f };
-        blue.color = { 0.0f, 0.0f, 1.0f, 1.0f };
-        for (auto quad : { red, green, blue }) {
-            renderer.draw_quad(quad);
-        }
+        QuadExtent red_extent{};
+        red_extent.position = { 20.0f, 20.0f };
+        red_extent.size = { 50.0f, 50.0f };
+        renderer.draw_quad(red_extent, { 1.0f, 0.0f, 0.0f, 1.0f });
+        renderer.draw_quad(red_extent, white_queen);
 
-        SpriteCreateInfo sprite_info{};
-        sprite_info.position = { 70.0f, 20.0f };
-        sprite_info.size = { 50.0f, 50.0f };
-        sprite_info.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        sprite_info.texture = &knight;
-        renderer.draw_sprite(sprite_info);
+        QuadExtent green_extent{};
+        green_extent.position = { 70.0f, 20.0f };
+        green_extent.size = { 50.0f, 50.0f };
+        renderer.draw_quad(green_extent, { 0.0f, 1.0f, 0.0f, 1.0f });
+        renderer.draw_quad(green_extent, white_knight);
+
+        QuadExtent blue_extent{};
+        blue_extent.position = { 120.0f, 20.0f };
+        blue_extent.size = { 50.0f, 50.0f };
+        renderer.draw_quad(blue_extent, { 0.0f, 0.0f, 1.0f, 1.0f });
+        renderer.draw_quad(blue_extent, white_rook);
 
         // Draw a sample text
-        TextCreateInfo text{};
-        text.text = "The quick brown fox jumps over the lazy dog.";
-        text.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        text.position = { 20.0f, 100.0f };
-        text.size = GlyphCache::FONT_SIZE;
-        renderer.draw_text(text);
+        TextExtent text_extent{};
+        text_extent.position = { 20.0f, 100.0f };
+        text_extent.size = GlyphCache::FONT_SIZE;
+        renderer.draw_text(text_extent, { 1.0f, 1.0f, 1.0f, 1.0f }, "The quick brown fox jumps over the lazy dog.");
 
         // End the render pass which ultimately submits the draw call to the GPU
         renderer.end();

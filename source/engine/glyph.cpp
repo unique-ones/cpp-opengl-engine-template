@@ -25,14 +25,13 @@
 #include "file.h"
 
 // clang-format off
-#include <ft2build.h>
 #include <freetype/freetype.h>
 #include <fstream>
 #include <iterator>
 // clang-format on
 
 /// Creates a glyph cache for the specified font
-GlyphCache::GlyphCache(const fs::path &path) {
+GlyphCache::GlyphCache(const fs::path &path) : atlas{}, info{} {
     auto content = File::read(path, std::ios::binary);
     if (not content) {
         assert(false && "[glyph] Cannot load font!");
@@ -58,16 +57,16 @@ GlyphCache::GlyphCache(const fs::path &path) {
             continue;
         }
 
-        GlyphInfo *info = (this->info + i - 32);
-        info->size.x = (f32) (face->glyph->bitmap.width);
-        info->size.y = (f32) (face->glyph->bitmap.rows);
-        info->bearing.x = (f32) (face->glyph->bitmap_left);
-        info->bearing.y = (f32) (face->glyph->bitmap_top);
-        info->advance.x = (f32) (face->glyph->advance.x >> 6);
-        info->advance.y = (f32) (face->glyph->advance.y >> 6);
-        info->texture_span.x = 0.0f;
-        info->texture_span.y = 0.0f;
-        info->texture_offset = 0.0f;
+        GlyphInfo *glyph = (this->info + i - 32);
+        glyph->size.x = (f32) (face->glyph->bitmap.width);
+        glyph->size.y = (f32) (face->glyph->bitmap.rows);
+        glyph->bearing.x = (f32) (face->glyph->bitmap_left);
+        glyph->bearing.y = (f32) (face->glyph->bitmap_top);
+        glyph->advance.x = (f32) (face->glyph->advance.x >> 6);
+        glyph->advance.y = (f32) (face->glyph->advance.y >> 6);
+        glyph->texture_span.x = 0.0f;
+        glyph->texture_span.y = 0.0f;
+        glyph->texture_offset = 0.0f;
         size.x += (s32) face->glyph->bitmap.width;
         size.y = std::max(size.y, (s32) face->glyph->bitmap.rows);
     }
@@ -84,22 +83,22 @@ GlyphCache::GlyphCache(const fs::path &path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, size.x, size.y, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, size.x, size.y, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
 
     s32 offset = 0;
     for (u32 i = 0; i < 96; i++) {
         // unfortunately we still need to load the character again, as we need its bitmap buffer for the upload
-        if (FT_Load_Char(face, i + 32, FT_LOAD_RENDER) or face->glyph->bitmap.buffer == NULL) {
+        if (FT_Load_Char(face, i + 32, FT_LOAD_RENDER) or face->glyph->bitmap.buffer == nullptr) {
             continue;
         }
-        GlyphInfo *info = (this->info + i);
-        info->texture_offset = (f32) offset / (f32) size.x;
-        info->texture_span.x = info->size.x / (f32) size.x;
-        info->texture_span.y = info->size.y / (f32) size.y;
-        info->bearing.y -= (f32) size.y - info->size.y;
-        glTexSubImage2D(GL_TEXTURE_2D, 0, offset, 0, (s32) info->size.x, (s32) info->size.y, GL_RED, GL_UNSIGNED_BYTE,
+        GlyphInfo *glyph = (this->info + i);
+        glyph->texture_offset = (f32) offset / (f32) size.x;
+        glyph->texture_span.x = glyph->size.x / (f32) size.x;
+        glyph->texture_span.y = glyph->size.y / (f32) size.y;
+        glyph->bearing.y -= (f32) size.y - glyph->size.y;
+        glTexSubImage2D(GL_TEXTURE_2D, 0, offset, 0, (s32) glyph->size.x, (s32) glyph->size.y, GL_RED, GL_UNSIGNED_BYTE,
                         face->glyph->bitmap.buffer);
-        offset += (s32) info->size.x;
+        offset += (s32) glyph->size.x;
     }
 
     FT_Done_Face(face);

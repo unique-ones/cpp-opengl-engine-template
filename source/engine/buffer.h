@@ -90,11 +90,11 @@ struct VertexArray {
     ~VertexArray();
 
     /// Submits the vertex buffer to the vertex array, this sets all the specified attributes
-    /// @param vertex_buffer The vertex buffer handle
-    void submit(VertexBuffer *vertex_buffer);
+    /// @param buffer The vertex buffer handle
+    void submit(VertexBuffer *buffer);
     /// Submits the index buffer to the vertex array
-    /// @param index_buffer The index buffer handle
-    void submit(IndexBuffer *index_buffer);
+    /// @param buffer The index buffer handle
+    void submit(IndexBuffer *buffer);
 
     /// Binds the vertex array
     void bind() const;
@@ -129,7 +129,7 @@ struct FrameBuffer {
 
     /// Resizes the frame buffer
     /// @param width The new width
-    /// @param height The new heigh
+    /// @param height The new height
     void resize(s32 width, s32 height);
 
     /// Binds the frame buffer for rendering

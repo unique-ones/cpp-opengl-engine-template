@@ -30,11 +30,13 @@
 
 #include <array>
 #include <list>
+#include <set>
 
 struct Vertex {
     glm::vec2 position;
-    glm::vec2 texture_coordinates;
     glm::vec4 color;
+    glm::vec2 texture_coordinates;
+    s32 texture_index;
 
     /// Retrieves the layout of the vertex
     /// @return The layout
@@ -65,42 +67,27 @@ struct RenderGroup {
     void push(const RenderCommand &command);
 };
 
-struct QuadCreateInfo {
+struct QuadExtent {
     glm::vec2 position;
     glm::vec2 size;
-    glm::vec4 color;
 };
 
-struct SymbolCreateInfo {
-    GlyphInfo *glyph;
+struct SymbolExtent {
     glm::vec2 position;
-    glm::vec4 color;
     f32 size;
 };
 
-struct TextCreateInfo {
-    std::string_view text;
-    glm::vec2 position;
-    glm::vec4 color;
-    f32 size;
-};
-
-struct SpriteCreateInfo {
-    Texture *texture;
-    glm::vec2 position;
-    glm::vec2 size;
-    glm::vec4 color;
-};
+using TextExtent = SymbolExtent;
 
 struct Renderer {
     GlyphCache cache;
     RenderGroup glyph_group;
     RenderGroup quad_group;
-    RenderGroup sprite_group;
-
-    s32 viewport_width;
-    s32 viewport_height;
     glm::mat4 transform;
+
+    constexpr static inline s32 TEXTURE_START = 1;
+    constexpr static inline s32 TEXTURE_MAX = 32;
+    std::unordered_map<u32, s32> textures;
 
     /// Creates a new renderer
     Renderer();
@@ -113,21 +100,21 @@ struct Renderer {
     /// Ends the started render pass and submits to the gpu
     void end();
 
-    /// Draws a quad
-    /// @param info The quad's information
-    void draw_quad(const QuadCreateInfo &info);
+    /// Draws a colored quad
+    /// @param ext The quad's extent
+    void draw_quad(const QuadExtent &ext, const glm::vec4 &color);
+
+    /// Draws a textured quad
+    /// @param ext The quad's extent
+    void draw_quad(const QuadExtent &ext, const Texture &texture);
 
     /// Draws a symbol
-    /// @param info The symbol's information
-    void draw_symbol(const SymbolCreateInfo &info);
+    /// @param ext The symbol's extent
+    void draw_symbol(const SymbolExtent &ext, const glm::vec4 &color, const GlyphInfo &glyph);
 
     /// Draws text
-    /// @param info The text information
-    void draw_text(const TextCreateInfo &info);
-
-    /// Draws a sprite
-    /// @param info The sprite information
-    void draw_sprite(const SpriteCreateInfo &info);
+    /// @param ext The text's extent
+    void draw_text(const TextExtent &ext, const glm::vec4 &color, std::string_view text);
 
     /// Clears the currently bound frame buffer
     static void clear();

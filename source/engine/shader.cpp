@@ -122,51 +122,61 @@ Shader::~Shader() {
 
 /// Sets a s32 uniform
 void Shader::uniform(const char *name, s32 value) {
+    bind();
     glUniform1i(uniform_location(name), value);
 }
 
 /// Sets a u32 uniform
 void Shader::uniform(const char *name, u32 value) {
+    bind();
     glUniform1ui(uniform_location(name), value);
 }
 
 /// Sets a glm::ivec2 uniform
 void Shader::uniform(const char *name, const glm::ivec2 &value) {
+    bind();
     glUniform2i(uniform_location(name), value.x, value.y);
 }
 
 /// Sets a glm::ivec3 uniform
 void Shader::uniform(const char *name, const glm::ivec3 &value) {
+    bind();
     glUniform3i(uniform_location(name), value.x, value.y, value.z);
 }
 
 /// Sets a glm::ivec4 uniform
 void Shader::uniform(const char *name, const glm::ivec4 &value) {
+    bind();
     glUniform4i(uniform_location(name), value.x, value.y, value.z, value.w);
 }
 
 /// Sets a f32 uniform
 void Shader::uniform(const char *name, f32 value) {
+    bind();
     glUniform1f(uniform_location(name), value);
 }
 
 /// Sets a glm::vec2 uniform
 void Shader::uniform(const char *name, const glm::vec2 &value) {
+    bind();
     glUniform2f(uniform_location(name), value.x, value.y);
 }
 
 /// Sets a glm::vec3 uniform
 void Shader::uniform(const char *name, const glm::vec3 &value) {
+    bind();
     glUniform3f(uniform_location(name), value.x, value.y, value.z);
 }
 
 /// Sets a glm::vec4 uniform
 void Shader::uniform(const char *name, const glm::vec4 &value) {
+    bind();
     glUniform4f(uniform_location(name), value.x, value.y, value.z, value.w);
 }
 
 /// Sets a glm::mat4 uniform
 void Shader::uniform(const char *name, const glm::mat4 &value) {
+    bind();
     glUniformMatrix4fv(uniform_location(name), 1, GL_FALSE, &value[0][0]);
 }
 
@@ -181,7 +191,7 @@ void Shader::unbind() {
 }
 
 /// Retrieves the location of a uniform
-u32 Shader::uniform_location(const char *name) {
+s32 Shader::uniform_location(const char *name) {
     if (uniforms.contains(name)) {
         return uniforms[name];
     }

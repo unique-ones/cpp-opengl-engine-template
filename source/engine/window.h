@@ -48,10 +48,10 @@ struct Window {
 
     /// Returns whether the window should close
     /// @return A boolean value that indicates whether the window should close
-    bool should_close();
+    bool should_close() const;
 
     /// Updates the window by swapping front and back buffers and polling events
-    void update();
+    void update() const;
 };
 
 #endif// ENGINE_WINDOW_H

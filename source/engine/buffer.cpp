@@ -22,14 +22,13 @@
 // SOFTWARE.
 
 #include <cassert>
-#include <cstdio>
 
 #include "buffer.h"
 
 namespace {
 
 /// Converts a shader type to its stride in bytes
-u32 shader_type_stride(ShaderType type) {
+s32 shader_type_stride(ShaderType type) {
     switch (type) {
         case ShaderType::INT:
             return sizeof(GLint);
@@ -53,7 +52,7 @@ u32 shader_type_stride(ShaderType type) {
 }
 
 /// Converts a shader type to its OpenGL base type
-u32 shader_type_opengl(ShaderType type) {
+s32 shader_type_opengl(ShaderType type) {
     switch (type) {
         case ShaderType::INT:
         case ShaderType::INT2:
@@ -71,7 +70,7 @@ u32 shader_type_opengl(ShaderType type) {
 }
 
 /// Calculates the number of primitives in a shader type
-u32 shader_type_primitives(ShaderType type) {
+s32 shader_type_primitives(ShaderType type) {
     switch (type) {
         case ShaderType::INT:
             return 1;
@@ -95,8 +94,8 @@ u32 shader_type_primitives(ShaderType type) {
 }
 
 /// Calculates the total stride of a vertex buffer layout
-u32 vertex_buffer_layout_stride(const VertexBufferLayout &layout) {
-    u32 stride = 0;
+s32 vertex_buffer_layout_stride(const VertexBufferLayout &layout) {
+    s32 stride = 0;
     for (auto attribute : layout) {
         stride += shader_type_stride(attribute);
     }
@@ -167,32 +166,32 @@ VertexArray::~VertexArray() {
 }
 
 /// Sets the vertex buffer for the vertex array, this sets all the specified attributes
-void VertexArray::submit(VertexBuffer *vertex_buffer) {
+void VertexArray::submit(VertexBuffer *buffer) {
     this->bind();
-    vertex_buffer->bind();
+    buffer->bind();
 
     s64 offset = 0;
-    auto stride = vertex_buffer_layout_stride(vertex_buffer->layout);
-    for (u32 i = 0; i < vertex_buffer->layout.size(); ++i) {
+    auto stride = vertex_buffer_layout_stride(buffer->layout);
+    for (u32 i = 0; i < buffer->layout.size(); ++i) {
         glEnableVertexAttribArray(i);
-        auto attribute = vertex_buffer->layout[i];
+        auto attribute = buffer->layout[i];
         auto opengl_type = shader_type_opengl(attribute);
-        auto primites = shader_type_primitives(attribute);
+        auto primitives = shader_type_primitives(attribute);
         if (opengl_type == GL_FLOAT) {
-            glVertexAttribPointer(i, primites, opengl_type, GL_FALSE, stride, reinterpret_cast<const void *>(offset));
+            glVertexAttribPointer(i, primitives, opengl_type, GL_FALSE, stride, reinterpret_cast<const void *>(offset));
         } else if (opengl_type == GL_INT) {
-            glVertexAttribIPointer(i, primites, opengl_type, stride, reinterpret_cast<const void *>(offset));
+            glVertexAttribIPointer(i, primitives, opengl_type, stride, reinterpret_cast<const void *>(offset));
         }
         offset += shader_type_stride(attribute);
     }
-    this->vertex_buffer = vertex_buffer;
+    vertex_buffer = buffer;
 }
 
 /// Sets the index buffer for the vertex array
-void VertexArray::submit(IndexBuffer *index_buffer) {
+void VertexArray::submit(IndexBuffer *buffer) {
     this->bind();
-    index_buffer->bind();
-    this->index_buffer = index_buffer;
+    buffer->bind();
+    index_buffer = buffer;
 }
 
 /// Binds the vertex array

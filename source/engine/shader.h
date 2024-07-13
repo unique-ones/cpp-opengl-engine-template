@@ -40,7 +40,7 @@ enum class ShaderType {
 
 struct Shader {
     u32 handle;
-    std::unordered_map<std::string, u32> uniforms;
+    std::unordered_map<std::string, s32> uniforms;
 
     /// Creates a shader from the given vertex and fragment shader files
     /// @param vertex path to the vertex shader
@@ -118,7 +118,7 @@ private:
     /// Retrieves the location of a uniform
     /// @param name The name of the uniform
     /// @return The location
-    u32 uniform_location(const char *name);
+    s32 uniform_location(const char *name);
 };
 
 #endif// ENGINE_SHADER_H

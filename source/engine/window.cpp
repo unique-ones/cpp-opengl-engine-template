@@ -47,7 +47,7 @@ const char *opengl_severity(u32 severity) {
 }
 
 /// Error callback for OpenGL
-void opengl_error_callback(u32 source, u32 type, u32 severity, s32 length, const char *message, const void *args) {
+void opengl_error_callback(u32, u32 type, u32, u32 severity, s32, const char *message, const void *) {
     // Do not care for messages that are just notifications
     if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) {
         return;
@@ -95,6 +95,8 @@ Window::Window(const WindowCreateInfo &info) : width(info.width), height(info.he
 
     glfwSetWindowUserPointer(handle, this);
     glfwSetFramebufferSizeCallback(handle, glfw_frame_callback);
+    glfwSwapInterval(0);
+    glDebugMessageCallback(opengl_error_callback, nullptr);
 }
 
 /// Destroys the window
@@ -103,12 +105,12 @@ Window::~Window() {
 }
 
 /// Returns whether the window should close
-bool Window::should_close() {
+bool Window::should_close() const {
     return glfwWindowShouldClose(handle);
 }
 
 /// Updates the window by swapping front and back buffers and polling events
-void Window::update() {
+void Window::update() const {
     glfwSwapBuffers(handle);
     glfwPollEvents();
 }
