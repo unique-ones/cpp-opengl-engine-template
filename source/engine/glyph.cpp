@@ -50,7 +50,7 @@ GlyphCache::GlyphCache(const fs::path &path) : atlas{}, info{} {
     FT_Set_Pixel_Sizes(face, 0, FONT_SIZE);
 
     // calculate combined size of glyphs
-    glm::ivec2 size = { 0, 0 };
+    glm::i32vec2 size = { 0, 0 };
     for (s32 i = 32; i < 128; i++) {
         if (FT_Load_Char(face, (FT_ULong) i, FT_LOAD_RENDER)) {
             fprintf(stderr, "could not load character: %c\n", (char) i);
@@ -58,24 +58,25 @@ GlyphCache::GlyphCache(const fs::path &path) : atlas{}, info{} {
         }
 
         GlyphInfo *glyph = (this->info + i - 32);
-        glyph->size.x = (f32) (face->glyph->bitmap.width);
-        glyph->size.y = (f32) (face->glyph->bitmap.rows);
-        glyph->bearing.x = (f32) (face->glyph->bitmap_left);
-        glyph->bearing.y = (f32) (face->glyph->bitmap_top);
-        glyph->advance.x = (f32) (face->glyph->advance.x >> 6);
-        glyph->advance.y = (f32) (face->glyph->advance.y >> 6);
+        glyph->size.x = static_cast<s32>(face->glyph->bitmap.width);
+        glyph->size.y = static_cast<s32>(face->glyph->bitmap.rows);
+        glyph->bearing.x = face->glyph->bitmap_left;
+        glyph->bearing.y = face->glyph->bitmap_top;
+        glyph->advance.x = face->glyph->advance.x >> 6;
+        glyph->advance.y = face->glyph->advance.y >> 6;
         glyph->texture_span.x = 0.0f;
         glyph->texture_span.y = 0.0f;
         glyph->texture_offset = 0.0f;
-        size.x += (s32) face->glyph->bitmap.width;
-        size.y = std::max(size.y, (s32) face->glyph->bitmap.rows);
+        size.x += glyph->advance.x;
+        size.y = std::max(size.y, glyph->size.y);
     }
 
     atlas.data = nullptr;
     atlas.handle = 0;
-    atlas.width = size.x;
-    atlas.height = size.y;
+    atlas.width = static_cast<s32>(size.x);
+    atlas.height = static_cast<s32>(size.y);
     atlas.channels = 1;
+
     glCreateTextures(GL_TEXTURE_2D, 1, &atlas.handle);
     glBindTextureUnit(0, atlas.handle);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -83,7 +84,12 @@ GlyphCache::GlyphCache(const fs::path &path) : atlas{}, info{} {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, size.x, size.y, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+
+    std::vector<GLuint> zeros(size.x * size.y, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, size.x, size.y, 0, GL_RED, GL_UNSIGNED_BYTE, zeros.data());
+
+    GLint swizzle[] = { GL_ZERO, GL_ZERO, GL_ZERO, GL_RED };
+    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
 
     s32 offset = 0;
     for (u32 i = 0; i < 96; i++) {
@@ -92,13 +98,13 @@ GlyphCache::GlyphCache(const fs::path &path) : atlas{}, info{} {
             continue;
         }
         GlyphInfo *glyph = (this->info + i);
-        glyph->texture_offset = (f32) offset / (f32) size.x;
-        glyph->texture_span.x = glyph->size.x / (f32) size.x;
-        glyph->texture_span.y = glyph->size.y / (f32) size.y;
-        glyph->bearing.y -= (f32) size.y - glyph->size.y;
-        glTexSubImage2D(GL_TEXTURE_2D, 0, offset, 0, (s32) glyph->size.x, (s32) glyph->size.y, GL_RED, GL_UNSIGNED_BYTE,
+        glyph->texture_offset = static_cast<f32>(offset) / static_cast<f32>(size.x);
+        glyph->texture_span.x = static_cast<f32>(glyph->size.x) / static_cast<f32>(size.x);
+        glyph->texture_span.y = static_cast<f32>(glyph->size.y) / static_cast<f32>(size.y);
+        glyph->bearing.y -= size.y - glyph->size.y;
+        glTexSubImage2D(GL_TEXTURE_2D, 0, offset, 0, glyph->size.x, glyph->size.y, GL_RED, GL_UNSIGNED_BYTE,
                         face->glyph->bitmap.buffer);
-        offset += (s32) glyph->size.x;
+        offset += glyph->advance.x;
     }
 
     FT_Done_Face(face);

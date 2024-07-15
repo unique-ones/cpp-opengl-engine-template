@@ -143,9 +143,9 @@ void Renderer::draw_quad(const QuadExtent &ext, const Texture &texture) {
 /// Draws a symbol
 void Renderer::draw_symbol(const SymbolExtent &ext, const glm::vec4 &color, const GlyphInfo &glyph) {
     auto scale = ext.size / GlyphCache::FONT_SIZE;
-    auto scaled_size = glyph.size * scale;
-    auto scaled_position = glm::vec2{ ext.position.x + glyph.bearing.x * scale,
-                                      ext.position.y + (glyph.size.y - glyph.bearing.y) * scale };
+    auto scaled_size = glm::vec2{ glyph.size } * scale;
+    auto scaled_position = glm::vec2{ ext.position.x + static_cast<f32>(glyph.bearing.x) * scale,
+                                      ext.position.y + static_cast<f32>(glyph.size.y - glyph.bearing.y) * scale };
 
     RenderCommand command{};
     command.vertices = {

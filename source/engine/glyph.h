@@ -28,9 +28,9 @@
 #include "types.h"
 
 struct GlyphInfo {
-    glm::vec2 size;
-    glm::vec2 bearing;
-    glm::vec2 advance;
+    glm::ivec2 size;
+    glm::ivec2 bearing;
+    glm::ivec2 advance;
     glm::vec2 texture_span;
     f32 texture_offset;
 };
